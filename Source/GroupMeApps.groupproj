@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{0C5A4C07-806E-4E95-8D83-125260749559}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Apps\Bot\GroupMePostApp.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Apps\Messenger\GroupMeMessenger.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="GroupMePostApp">
+        <MSBuild Projects="Apps\Bot\GroupMePostApp.dproj"/>
+    </Target>
+    <Target Name="GroupMePostApp:Clean">
+        <MSBuild Projects="Apps\Bot\GroupMePostApp.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GroupMePostApp:Make">
+        <MSBuild Projects="Apps\Bot\GroupMePostApp.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="GroupMeMessenger">
+        <MSBuild Projects="Apps\Messenger\GroupMeMessenger.dproj"/>
+    </Target>
+    <Target Name="GroupMeMessenger:Clean">
+        <MSBuild Projects="Apps\Messenger\GroupMeMessenger.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GroupMeMessenger:Make">
+        <MSBuild Projects="Apps\Messenger\GroupMeMessenger.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="GroupMePostApp;GroupMeMessenger"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="GroupMePostApp:Clean;GroupMeMessenger:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="GroupMePostApp:Make;GroupMeMessenger:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
