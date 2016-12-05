@@ -1,4 +1,4 @@
-unit GroupMeMessengerU;
+unit GroupMeRequestManagerU;
 
 (*
   INFORMATION
@@ -28,18 +28,22 @@ uses
 type
   TGroupMeMessengerRequestType = (grtGet, grtPost);
 
-  TGroupMeMessengerRequestEvent = procedure(aType: TGroupMeMessengerRequestType;
-    const URL, Data: string; out ResponseData: string) of object;
+  TGroupMeMessengerRequestEvent = procedure(const aRequestID: TGUID; aType:
+      TGroupMeMessengerRequestType; const URL, RequestData: string; out
+      ResponseData: string) of object;
 
   ///  <summary>
   ///  This object containt the base requests for interacting with the
   ///  GroupMe api. It does NOT contain HTTP transport code, to make the
   ///  request API as customisable as possible.
   ///
-  ///  Override 'DoRequest' or set the 'OnRequest' event to actualy send
+  ///  Override 'InternalDoRequest' or set the 'OnRequest' event to actualy send
   ///  the request using your own favorite HTTP methods.
+  ///
+  ///  The 'aRequestID' parameter is something like a correlation ID, when
+  ///  using the messenger in ASync processed/threads.
   ///  </summary>
-  TGroupMeMessenger = class(TComponent)
+  TGroupMeRequestManager = class(TComponent)
   private
     FBaseURL: string;
     FOnRequest: TGroupMeMessengerRequestEvent;
@@ -48,9 +52,12 @@ type
     FToken: string;
     function GetBaseURIMessages(aGroupID: TGroupMeGroupID): string;
     function GetTokenParam: string;
+    procedure InternalDoRequest(aType: TGroupMeMessengerRequestType; const URL,
+        Data: string; out ResponseData: string); virtual;
   protected
-    procedure DoRequest(aType: TGroupMeMessengerRequestType; const URL, Data:
-        string; out ResponseData: string); virtual;
+    procedure DoRequest(const aRequestID: TGUID; aType:
+        TGroupMeMessengerRequestType; const URL, Data: string; out ResponseData:
+        string); virtual;
   public
     constructor Create(AOwner: TComponent); override;
     function GetGroupInfo(aGroupID: TGroupMeGroupID): TGroupMeResponseGroupInfo;
@@ -66,6 +73,7 @@ type
     property PageSizeMessages: Integer read FPageSizeMessages write
         FPageSizeMessages default 20;
     property Token: string read FToken write FToken;
+  published
     property OnRequest: TGroupMeMessengerRequestEvent read FOnRequest write
         FOnRequest;
   end;
@@ -78,7 +86,7 @@ uses
 const
   sTokenParam = 'token=%s';
 
-constructor TGroupMeMessenger.Create(AOwner: TComponent);
+constructor TGroupMeRequestManager.Create(AOwner: TComponent);
 begin
   FPageSizeGroupList := 10;
   FPageSizeMessages := 20;
@@ -86,16 +94,24 @@ begin
   inherited;
 end;
 
-procedure TGroupMeMessenger.DoRequest(aType: TGroupMeMessengerRequestType;
-    const URL, Data: string; out ResponseData: string);
+procedure TGroupMeRequestManager.DoRequest(const aRequestID: TGUID; aType:
+    TGroupMeMessengerRequestType; const URL, Data: string; out ResponseData:
+    string);
 begin
   if Assigned(FOnRequest) then
-    FOnRequest(aType, URL, Data, ResponseData)
+    FOnRequest(aRequestID, aType, URL, Data, ResponseData)
   else
     ResponseData := '';
 end;
 
-function TGroupMeMessenger.GetBaseURIMessages(aGroupID: TGroupMeGroupID):
+procedure TGroupMeRequestManager.InternalDoRequest(aType:
+    TGroupMeMessengerRequestType; const URL, Data: string; out ResponseData:
+    string);
+begin
+  DoRequest(TGUID.NewGuid, aType, URL, Data, ResponseData);
+end;
+
+function TGroupMeRequestManager.GetBaseURIMessages(aGroupID: TGroupMeGroupID):
     string;
 begin
   Result := FBaseURL + '/groups/' + aGroupID.ToString() + '/messages' +
@@ -103,18 +119,18 @@ begin
     '&limit=' + PageSizeMessages.ToString();
 end;
 
-function TGroupMeMessenger.GetGroupInfo(aGroupID: TGroupMeGroupID):
+function TGroupMeRequestManager.GetGroupInfo(aGroupID: TGroupMeGroupID):
     TGroupMeResponseGroupInfo;
 var
   sURI, sResponse: string;
 begin
   sURI := FBaseURL + '/groups/' + aGroupID.ToString() +
     '?' + GetTokenParam;
-  DoRequest(grtGet, sURI, '', sResponse);
-  Result := TJson.JsonToObject<TGroupMeResponseGroupInfo>(sResponse);
+  InternalDoRequest(grtGet, sURI, '', sResponse);
+  Result := TJson.JsonToObject<TGroupMeResponseGroupInfo>(sResponse, [joDateFormatUnix]);
 end;
 
-function TGroupMeMessenger.GetGroupList(aPage: Integer):
+function TGroupMeRequestManager.GetGroupList(aPage: Integer):
     TGroupMeResponseGroupList;
 var
   sURI, sResponse: string;
@@ -123,21 +139,21 @@ begin
     '?' + GetTokenParam +
     '&per_page=' + PageSizeGroupList.ToString() +
     '&page=' + aPage.ToString();
-  DoRequest(grtGet, sURI, '', sResponse);
-  Result := TJson.JsonToObject<TGroupMeResponseGroupList>(sResponse);
+  InternalDoRequest(grtGet, sURI, '', sResponse);
+  Result := TJson.JsonToObject<TGroupMeResponseGroupList>(sResponse, [joDateFormatUnix]);
 end;
 
-function TGroupMeMessenger.GetMessages(aGroupID: TGroupMeGroupID):
+function TGroupMeRequestManager.GetMessages(aGroupID: TGroupMeGroupID):
     TGroupMeResponseMessages;
 var
   sURI, sResponse: string;
 begin
   sURI := GetBaseURIMessages(aGroupID);
-  DoRequest(grtGet, sURI, '', sResponse);
-  Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse);
+  InternalDoRequest(grtGet, sURI, '', sResponse);
+  Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse, [joDateFormatUnix]);
 end;
 
-function TGroupMeMessenger.GetMessagesAfter(aGroupID: TGroupMeGroupID;
+function TGroupMeRequestManager.GetMessagesAfter(aGroupID: TGroupMeGroupID;
     aAfterID: TGroupMeMessageID): TGroupMeResponseMessages;
 var
   sURI, sResponse: string;
@@ -146,12 +162,12 @@ begin
     Result := GetMessages(aGroupID)
   else begin
     sURI := GetBaseURIMessages(aGroupID) + '&after_id=' + aAfterID.ToString();
-    DoRequest(grtGet, sURI, '', sResponse);
-    Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse);
+    InternalDoRequest(grtGet, sURI, '', sResponse);
+    Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse, [joDateFormatUnix]);
   end;
 end;
 
-function TGroupMeMessenger.GetMessagesBefore(aGroupID: TGroupMeGroupID;
+function TGroupMeRequestManager.GetMessagesBefore(aGroupID: TGroupMeGroupID;
     aBeforeID: TGroupMeMessageID): TGroupMeResponseMessages;
 var
   sURI, sResponse: string;
@@ -160,12 +176,12 @@ begin
     Result := GetMessages(aGroupID)
   else begin
     sURI := GetBaseURIMessages(aGroupID) + '&before_id=' + aBeforeID.ToString();
-    DoRequest(grtGet, sURI, '', sResponse);
-    Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse);
+    InternalDoRequest(grtGet, sURI, '', sResponse);
+    Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse, [joDateFormatUnix]);
   end;
 end;
 
-function TGroupMeMessenger.GetTokenParam: string;
+function TGroupMeRequestManager.GetTokenParam: string;
 begin
   Result := Format(sTokenParam, [FToken]);
 end;

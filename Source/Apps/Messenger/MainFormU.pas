@@ -20,7 +20,8 @@ uses
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
   FMX.Controls.Presentation, IdBaseComponent, IdComponent, IdTCPConnection,
   IdTCPClient, IdHTTP, FMX.ScrollBox, FMX.Memo, FMX.Edit, FMX.EditBox,
-  FMX.NumberBox, GroupMeMessengerU, GroupMeObjectsU;
+  FMX.NumberBox, GroupMeRequestManagerU, GroupMeObjectsU, FMX.ListView.Types,
+  FMX.ListView.Appearances, FMX.ListView.Adapters.Base, FMX.ListView;
 
 type
   TfrmMain = class(TForm)
@@ -32,19 +33,24 @@ type
     Label1: TLabel;
     Memo1: TMemo;
     btnGetMessages: TButton;
+    lvGroups: TListView;
     procedure btnGetBGroupsClick(Sender: TObject);
     procedure btnGetGroupClick(Sender: TObject);
     procedure btnGetMessagesClick(Sender: TObject);
     procedure btnLoginClick(Sender: TObject);
+    procedure edtGroupListPageSizeChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure lvGroupsChange(Sender: TObject);
   private
-    FMessenger: TGroupMeMessenger;
+    FRequestManager: TGroupMeRequestManager;
+    function GetGroupID(out aGroupID: TGroupMeGroupID): Boolean;
+    procedure LoadMessages(aGRoupID: TGroupMeGroupID);
     procedure TokenChanged;
-    procedure OnRequest(aType: TGroupMeMessengerRequestType; const URL, Data:
-        string; out ResponseData: string);
+    procedure OnRequest(const aRequestID: TGUID; aType:
+        TGroupMeMessengerRequestType; const URL, RequestData: string; out
+        ResponseData: string);
   public
     constructor Create(AOwner: TComponent); override;
-    function GetGroupID: TGroupMeGroupID;
   end;
 
 var
@@ -58,41 +64,60 @@ uses
 {$R *.fmx}
 
 procedure TfrmMain.btnGetBGroupsClick(Sender: TObject);
-var
-  aList: TGroupMeResponseGroupList;
-  I, iPage: Integer;
 begin
-  FMessenger.PageSizeGroupList := Round(edtGroupListPageSize.Value);
-  iPage := 1;
-  try
-    repeat
-      aList := FMessenger.GetGroupList(iPage);
+  lvGroups.Items.Clear;
+  TThread.CreateAnonymousThread(
+    procedure
+    var
+      aList: TGroupMeResponseGroupList;
+      iPage: Integer;
+    begin
+      iPage := 1;
       try
-        if Length(aList.response) > 0 then
-          for I := 0 to Length(aList.response) - 1 do
-            Memo1.Lines.Add(
-                aList.response[I].id.ToString + ' - ' +
-                aList.response[I].name + ' - ' +
-                aList.response[I].max_members.ToString
-              )
-        else
-          Break;
-      finally
-        aList.Free;
+        repeat
+          aList := FRequestManager.GetGroupList(iPage);
+          try
+            if Length(aList.response) > 0 then
+            begin
+              TThread.Synchronize(nil,
+                procedure
+                var
+                  I: Integer;
+                  item: TListViewItem;
+                begin
+                  for I := 0 to Length(aList.response) - 1 do
+                  begin
+                    item := lvGroups.Items.Add;
+                    item.Text := aList.response[I].name;
+                    item.Tag := aList.response[I].id;
+                  end;
+                end);
+            end else
+              Break;
+          finally
+            aList.Free;
+          end;
+          Inc(iPage);
+        until False;
+      except
+        on E: Exception do
+          TThread.Synchronize(nil,
+            procedure
+            begin
+              Memo1.Lines.Add(E.ClassName + ' - ' + E.Message);
+            end);
       end;
-      Inc(iPage);
-    until False;
-  except
-    on E: Exception do
-      Memo1.Lines.Add(E.ClassName + ' - ' + E.Message);
-  end;
+    end).Start;
 end;
 
 procedure TfrmMain.btnGetGroupClick(Sender: TObject);
 var
+  aGroupID: TGroupMeGroupID;
   _GroupInfo: TGroupMeResponseGroupInfo;
 begin
-  _GroupInfo := FMessenger.GetGroupInfo(GetGroupID);
+  if not GetGroupID(aGroupID) then Exit;
+
+  _GroupInfo := FRequestManager.GetGroupInfo(aGroupID);
   try
     Memo1.Lines.Add(
         _GroupInfo.response.id.ToString + ' - ' +
@@ -112,7 +137,7 @@ begin
   try
     if ShowModal = mrOK then
     begin
-      FMessenger.Token := Token;
+      FRequestManager.Token := Token;
       ForceDirectories(AppUserDataPath);
       ini := TMemIniFile.Create(AppConfigFile);
       try
@@ -130,48 +155,29 @@ end;
 
 constructor TfrmMain.Create(AOwner: TComponent);
 begin
-  FMessenger := TGroupMeMessenger.Create(Self);
-  FMessenger.OnRequest := OnRequest;
+  FRequestManager := TGroupMeRequestManager.Create(Self);
+  FRequestManager.OnRequest := OnRequest;
   inherited;
 end;
 
 procedure TfrmMain.btnGetMessagesClick(Sender: TObject);
 var
-  aList: TGroupMeResponseMessages;
-  aMsgID: TGroupMeMessageID;
-  I, iCount: Integer;
+  aGroupID: TGroupMeGroupID;
 begin
-  FMessenger.PageSizeGroupList := Round(edtGroupListPageSize.Value);
+  if GetGroupID(aGroupID) then
   try
-    aMsgID := 0;
-    iCount := 0;
-    repeat
-      aList := FMessenger.GetMessagesBefore(GetGroupID, aMsgID);
-      try
-        if (Length(aList.response.messages) > 0) and (iCount < 100) then
-        begin
-          for I := 0 to Length(aList.response.messages) - 1 do
-            Memo1.Lines.Add(
-                aList.response.messages[I].id.ToString + ' - ' +
-                aList.response.messages[I].source_guid + ' - ' +
-                aList.response.messages[I].created_at.ToString() + ' - ' +
-                aList.response.messages[I].text
-              );
-
-          // Last message ID
-          aMsgID := aList.response.messages[Length(aList.response.messages) - 1].id;
-
-          Inc(iCount, Length(aList.response.messages));
-        end else
-          Break;
-      finally
-        aList.Free;
-      end;
-    until False;
+    Memo1.Lines.Clear;
+    LoadMessages(aGRoupID);
   except
     on E: Exception do
       Memo1.Lines.Add(E.ClassName + ' - ' + E.Message);
   end;
+end;
+
+procedure TfrmMain.edtGroupListPageSizeChange(Sender: TObject);
+begin
+  FRequestManager.PageSizeGroupList := Round(edtGroupListPageSize.Value);
+//  FRequestManager.PageSizeGroupList := Round(edtGroupListPageSize.Value);
 end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
@@ -180,24 +186,74 @@ var
 begin
   ini := TMemIniFile.Create(AppConfigFile);
   try
-    FMessenger.Token := ini.ReadString('UserAccess', 'Token', '');
+    FRequestManager.Token := ini.ReadString('UserAccess', 'Token', '');
     TokenChanged;
   finally
     ini.Free;
   end;
 end;
 
-function TfrmMain.GetGroupID: TGroupMeGroupID;
+function TfrmMain.GetGroupID(out aGroupID: TGroupMeGroupID): Boolean;
 var
-  sGroupID: string;
+  item: TListViewItem;
 begin
-  sGroupID := Memo1.Lines[Memo1.CaretPosition.Line];
-  Delete(sGroupID, Pos(' ', sGroupID), Length(sGroupID));
-  Result := StrToInt(sGroupID);
+  item := (lvGroups.Selected as TListViewItem);
+  if Assigned(item) then
+  begin
+    aGroupID := item.Tag;
+    Result := True;
+  end else
+    Result := False;
 end;
 
-procedure TfrmMain.OnRequest(aType: TGroupMeMessengerRequestType; const URL,
-    Data: string; out ResponseData: string);
+procedure TfrmMain.LoadMessages(aGRoupID: TGroupMeGroupID);
+var
+  aList: TGroupMeResponseMessages;
+  aMsgID: TGroupMeMessageID;
+  I, iCount: Integer;
+begin
+  aMsgID := 0;
+  iCount := 0;
+  repeat
+    aList := FRequestManager.GetMessagesBefore(aGroupID, aMsgID);
+    try
+      if (Length(aList.response.messages) > 0) and (iCount < 100) then
+      begin
+        for I := 0 to Length(aList.response.messages) - 1 do
+          Memo1.Lines.Add(
+              aList.response.messages[I].id.ToString + ' - ' +
+              aList.response.messages[I].source_guid + ' - ' +
+              aList.response.messages[I].created_at.ToString() + ' - ' +
+              aList.response.messages[I].text
+            );
+
+        // Last message ID
+        aMsgID := aList.response.messages[Length(aList.response.messages) - 1].id;
+
+        Inc(iCount, Length(aList.response.messages));
+      end else
+        Break;
+    finally
+      aList.Free;
+    end;
+  until False;
+end;
+
+procedure TfrmMain.lvGroupsChange(Sender: TObject);
+var
+  item: TListViewItem;
+begin
+  item := (Sender as TListView).Selected as TListViewItem;
+  if Assigned(item) then
+  begin
+    Memo1.Lines.Clear;
+    LoadMessages(item.Tag);
+  end;
+end;
+
+procedure TfrmMain.OnRequest(const aRequestID: TGUID; aType:
+    TGroupMeMessengerRequestType; const URL, RequestData: string; out
+    ResponseData: string);
 var
   str: TStream;
 begin
@@ -206,7 +262,7 @@ begin
       ResponseData := IdHTTP1.Get(URL);
     grtPost:
       begin
-        str := TStringStream.Create(Data);
+        str := TStringStream.Create(RequestData);
         try
           ResponseData := IdHTTP1.Post(URL, str);
         finally
@@ -220,7 +276,7 @@ end;
 
 procedure TfrmMain.TokenChanged;
 begin
-  Label1.Text := 'Token: ' + FMessenger.Token;
+  Label1.Text := 'Token: ' + FRequestManager.Token;
 end;
 
 end.

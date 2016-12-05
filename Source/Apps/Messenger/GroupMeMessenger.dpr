@@ -16,7 +16,7 @@ uses
   FMX.Forms,
   GroupMeConstU in '..\..\Common\GroupMeConstU.pas',
   GroupMeObjectsU in '..\..\Common\GroupMeObjectsU.pas',
-  GroupMeMessengerU in '..\..\Common\GroupMeMessengerU.pas',
+  GroupMeRequestManagerU in '..\..\Common\GroupMeRequestManagerU.pas',
   AppFuncU in 'AppFuncU.pas',
   MainFormU in 'MainFormU.pas' {frmMain},
   LoginFormU in 'LoginFormU.pas' {frmLogin};

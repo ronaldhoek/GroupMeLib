@@ -2,8 +2,8 @@ object frmMain: TfrmMain
   Left = 0
   Top = 0
   Caption = 'Form2'
-  ClientHeight = 480
-  ClientWidth = 640
+  ClientHeight = 550
+  ClientWidth = 873
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
@@ -36,16 +36,15 @@ object frmMain: TfrmMain
   object Memo1: TMemo
     Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
     DataDetectorTypes = []
-    TextSettings.WordWrap = True
     Anchors = [akLeft, akTop, akRight, akBottom]
-    Position.X = 8.000000000000000000
+    Position.X = 216.000000000000000000
     Position.Y = 72.000000000000000000
-    Size.Width = 625.000000000000000000
-    Size.Height = 401.000000000000000000
+    Size.Width = 650.000000000000000000
+    Size.Height = 471.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 5
-    Viewport.Width = 621.000000000000000000
-    Viewport.Height = 397.000000000000000000
+    Viewport.Width = 646.000000000000000000
+    Viewport.Height = 467.000000000000000000
   end
   object edtGroupListPageSize: TNumberBox
     Touch.InteractiveGestures = [LongTap, DoubleTap]
@@ -60,6 +59,7 @@ object frmMain: TfrmMain
     Size.Width = 41.000000000000000000
     Size.Height = 21.000000000000000000
     Size.PlatformDefault = False
+    OnChange = edtGroupListPageSizeChange
   end
   object btnGetGroup: TButton
     Position.X = 144.000000000000000000
@@ -77,6 +77,20 @@ object frmMain: TfrmMain
     TabOrder = 9
     Text = 'Get Messages'
     OnClick = btnGetMessagesClick
+  end
+  object lvGroups: TListView
+    ItemAppearanceClassName = 'TListItemAppearance'
+    ItemEditAppearanceClassName = 'TListItemShowCheckAppearance'
+    HeaderAppearanceClassName = 'TListHeaderObjects'
+    FooterAppearanceClassName = 'TListHeaderObjects'
+    Anchors = [akLeft, akTop, akBottom]
+    Position.X = 8.000000000000000000
+    Position.Y = 72.000000000000000000
+    Size.Width = 201.000000000000000000
+    Size.Height = 471.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 11
+    OnChange = lvGroupsChange
   end
   object IdHTTP1: TIdHTTP
     AllowCookies = True

@@ -4,7 +4,7 @@ unit GroupMeObjectsU;
   INFORMATION
 
     This unit containts the objects, which represent the data which can be
-    send or requested using the GRoupMe API.
+    send or requested using the GroupMe API.
 
   VERSION HISTORY
 
@@ -12,6 +12,10 @@ unit GroupMeObjectsU;
 *)
 
 interface
+
+// Uncomment define to make al timestamps 'integer' which will require the
+// actual time to be calculated from UNIX timestamp to Delphi datetime.
+{.$DEFINE TIMESTAMP_AS_INTEGER}
 
 type
   (*
@@ -21,12 +25,18 @@ type
   TGroupMeMessageID = Int64;
   TGroupMeMemberID = Integer;
   TGroupMeGroupID = Integer;
+
+  // Timestamp is always in UTC
+{$IFDEF TIMESTAMP_AS_INTEGER}
   TGroupMeTimeStamp = type Integer;
+{$ELSE}
+  TGroupMeTimeStamp = TDateTime;
+{$ENDIF}
 
   // Conversion functionality for the UNIX/POSIX timestamp
   TGroupMeTimeStampHelper = record helper for TGroupMeTimeStamp
-    function ToDateTime: TDateTime;
-    function ToString: string;
+    function ToDateTime(AReturnUTC: Boolean = False): TDateTime;
+    function ToString(AReturnUTC: Boolean = False): string;
   end;
 
   (*
@@ -208,38 +218,29 @@ type
     http://www.delphifaq.com/faq/f91.shtml
   *)
 
-  function DateTimeToUnix(ConvDate: TDateTime): Longint;
-  function UnixToDateTime(USec: Longint): TDateTime;
-
 implementation
 
 uses
-  System.SysUtils;
-
-const
-  // Sets UnixStartDate to TDateTime of 01/01/1970
-  UnixStartDate: TDateTime = 25569.0;
-
-function DateTimeToUnix(ConvDate: TDateTime): Longint;
-begin
-  Result := Round((ConvDate - UnixStartDate) * SecsPerDay);
-end;
-
-function UnixToDateTime(USec: Longint): TDateTime;
-begin
-  Result := (Usec / SecsPerDay) + UnixStartDate;
-end;
+  System.SysUtils, System.DateUtils;
 
 { TGroupMeTimeStampHelper }
 
-function TGroupMeTimeStampHelper.ToDateTime: TDateTime;
+function TGroupMeTimeStampHelper.ToDateTime(AReturnUTC: Boolean = False):
+    TDateTime;
 begin
-  Result := UnixToDateTime(Self);
+{$IFDEF TIMESTAMP_AS_INTEGER}
+  Result := UnixToDateTime(Self, AReturnUTC);
+{$ELSE}
+  if AReturnUTC then
+    Result := Self
+  else
+    Result := TTimeZone.Local.ToLocalTime(Self);
+{$ENDIF}
 end;
 
-function TGroupMeTimeStampHelper.ToString: string;
+function TGroupMeTimeStampHelper.ToString(AReturnUTC: Boolean = False): string;
 begin
-  Result := DateTimeToStr(ToDateTime);
+  Result := DateTimeToStr(ToDateTime(AReturnUTC));
 end;
 
 { TGroupMeMessagePreview }
