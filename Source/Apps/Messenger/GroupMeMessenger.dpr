@@ -17,6 +17,7 @@ uses
   GroupMeConstU in '..\..\Common\GroupMeConstU.pas',
   GroupMeObjectsU in '..\..\Common\GroupMeObjectsU.pas',
   GroupMeRequestManagerU in '..\..\Common\GroupMeRequestManagerU.pas',
+  GroupMeMessengerU in '..\..\Common\GroupMeMessengerU.pas',
   AppFuncU in 'AppFuncU.pas',
   MainFormU in 'MainFormU.pas' {frmMain},
   LoginFormU in 'LoginFormU.pas' {frmLogin};

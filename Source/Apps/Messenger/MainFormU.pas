@@ -21,7 +21,8 @@ uses
   FMX.Controls.Presentation, IdBaseComponent, IdComponent, IdTCPConnection,
   IdTCPClient, IdHTTP, FMX.ScrollBox, FMX.Memo, FMX.Edit, FMX.EditBox,
   FMX.NumberBox, GroupMeRequestManagerU, GroupMeObjectsU, FMX.ListView.Types,
-  FMX.ListView.Appearances, FMX.ListView.Adapters.Base, FMX.ListView;
+  FMX.ListView.Appearances, FMX.ListView.Adapters.Base, FMX.ListView,
+  GroupMeMessengerU, System.SyncObjs, FMX.Layouts, FMX.TreeView;
 
 type
   TfrmMain = class(TForm)
@@ -34,6 +35,7 @@ type
     Memo1: TMemo;
     btnGetMessages: TButton;
     lvGroups: TListView;
+    TreeView1: TTreeView;
     procedure btnGetBGroupsClick(Sender: TObject);
     procedure btnGetGroupClick(Sender: TObject);
     procedure btnGetMessagesClick(Sender: TObject);
@@ -42,15 +44,24 @@ type
     procedure FormCreate(Sender: TObject);
     procedure lvGroupsChange(Sender: TObject);
   private
+    FHttpUseLock: TSynchroObject;
+    FMessenger: TGroupMeMessenger;
     FRequestManager: TGroupMeRequestManager;
+    procedure AddTreeViewGroup(aGroup: TGroupMeGroup);
+    procedure AddTreeViewMessage(aParent: TTreeViewItem; aMessage: TGroupMeMessage);
     function GetGroupID(out aGroupID: TGroupMeGroupID): Boolean;
+    function GetTreeViewGroup(aGroupID: TGroupMeGroupID): TTreeViewItem;
     procedure LoadMessages(aGRoupID: TGroupMeGroupID);
     procedure TokenChanged;
     procedure OnRequest(const aRequestID: TGUID; aType:
         TGroupMeMessengerRequestType; const URL, RequestData: string; out
         ResponseData: string);
+  protected
+    procedure OnNewMessages(aGroupID: TGroupMeGroupID; aMessages:
+        ArrayOf_TGroupMeMessage);
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 var
@@ -66,6 +77,7 @@ uses
 procedure TfrmMain.btnGetBGroupsClick(Sender: TObject);
 begin
   lvGroups.Items.Clear;
+  TreeView1.Clear;
   TThread.CreateAnonymousThread(
     procedure
     var
@@ -84,13 +96,20 @@ begin
                 var
                   I: Integer;
                   item: TListViewItem;
+                  _GroupIDs: ArrayOf_TGroupMeGroupID;
                 begin
+                  SetLength(_GroupIDs, Length(aList.response));
                   for I := 0 to Length(aList.response) - 1 do
                   begin
+                    _GroupIDs[I] := aList.response[I].id;
+                    // ListView
                     item := lvGroups.Items.Add;
                     item.Text := aList.response[I].name;
                     item.Tag := aList.response[I].id;
+                    // TreeView
+                    AddTreeViewGroup(aList.response[I]);
                   end;
+                  FMessenger.GroupIDs := _GroupIDs;
                 end);
             end else
               Break;
@@ -138,6 +157,7 @@ begin
     if ShowModal = mrOK then
     begin
       FRequestManager.Token := Token;
+      FMessenger.Token := FRequestManager.Token;
       ForceDirectories(AppUserDataPath);
       ini := TMemIniFile.Create(AppConfigFile);
       try
@@ -155,9 +175,52 @@ end;
 
 constructor TfrmMain.Create(AOwner: TComponent);
 begin
+  FHttpUseLock := TCriticalSection.Create;
   FRequestManager := TGroupMeRequestManager.Create(Self);
   FRequestManager.OnRequest := OnRequest;
+  FMessenger := TGroupMeMessenger.Create(Self);
+  FMessenger.OnRequest := OnRequest;
+  FMessenger.OnNewMessages := OnNewMessages;
+  FMessenger.Active := True;
   inherited;
+end;
+
+destructor TfrmMain.Destroy;
+begin
+  inherited;
+  FreeAndNil(FHttpUseLock);
+end;
+
+procedure TfrmMain.AddTreeViewGroup(aGroup: TGroupMeGroup);
+var
+  tvi: TTreeViewItem;
+begin
+  tvi := TTreeViewItem.Create(TreeView1);
+  tvi.Text := aGroup.name;
+  tvi.Tag := aGroup.group_id;
+  TreeView1.AddObject(tvi);
+end;
+
+procedure TfrmMain.AddTreeViewMessage(aParent: TTreeViewItem; aMessage:
+    TGroupMeMessage);
+
+  function AttData: string;
+  var
+    I: Integer;
+  begin
+    Result := '';
+    for I := 0 to Length(aMessage.attachments) - 1 do
+      Result := Result + ' ' + aMessage.attachments[I].type_ + ':' + aMessage.attachments[I].url;
+  end;
+
+
+var
+  tvi: TTreeViewItem;
+begin
+  tvi := TTreeViewItem.Create(aParent);
+  tvi.Text := aMessage.created_at.ToString() + ' - ' + aMessage.text + AttData();
+  tvi.Tag := aMessage.id;
+  aParent.AddObject(tvi);
 end;
 
 procedure TfrmMain.btnGetMessagesClick(Sender: TObject);
@@ -167,7 +230,7 @@ begin
   if GetGroupID(aGroupID) then
   try
     Memo1.Lines.Clear;
-    LoadMessages(aGRoupID);
+    LoadMessages(aGroupID);
   except
     on E: Exception do
       Memo1.Lines.Add(E.ClassName + ' - ' + E.Message);
@@ -187,6 +250,7 @@ begin
   ini := TMemIniFile.Create(AppConfigFile);
   try
     FRequestManager.Token := ini.ReadString('UserAccess', 'Token', '');
+    FMessenger.Token := FRequestManager.Token;
     TokenChanged;
   finally
     ini.Free;
@@ -204,6 +268,19 @@ begin
     Result := True;
   end else
     Result := False;
+end;
+
+function TfrmMain.GetTreeViewGroup(aGroupID: TGroupMeGroupID): TTreeViewItem;
+var
+  I: Integer;
+begin
+  for I := 0 to TreeView1.Count - 1 do
+  begin
+    Result := TreeView1.Items[I];
+    if Result.Tag = aGroupID then
+      Exit;
+  end;
+  Result := nil;
 end;
 
 procedure TfrmMain.LoadMessages(aGRoupID: TGroupMeGroupID);
@@ -251,26 +328,58 @@ begin
   end;
 end;
 
+procedure TfrmMain.OnNewMessages(aGroupID: TGroupMeGroupID; aMessages:
+    ArrayOf_TGroupMeMessage);
+begin
+  TThread.Synchronize(nil,
+    procedure
+    var
+      tvi: TTreeViewItem;
+      I: Integer;
+    begin
+      tvi := GetTreeViewGroup(aGroupID);
+      Memo1.Lines.Add('');
+      Memo1.Lines.Add('GROUP: ' + IntToStr(aGroupID));
+      for I := 0 to Length(aMessages) - 1 do
+      begin
+        Memo1.Lines.Add(
+          aMessages[I].id.ToString + ' - ' +
+          aMessages[I].source_guid + ' - ' +
+          aMessages[I].created_at.ToString() + ' - ' +
+          aMessages[I].text );
+
+        AddTreeViewMessage(tvi, aMessages[I]);
+
+        aMessages[I].Free;
+      end;
+    end);
+end;
+
 procedure TfrmMain.OnRequest(const aRequestID: TGUID; aType:
     TGroupMeMessengerRequestType; const URL, RequestData: string; out
     ResponseData: string);
 var
   str: TStream;
 begin
-  case aType of
-    grtGet:
-      ResponseData := IdHTTP1.Get(URL);
-    grtPost:
-      begin
-        str := TStringStream.Create(RequestData);
-        try
-          ResponseData := IdHTTP1.Post(URL, str);
-        finally
-          str.Free;
-        end;
-      end
-  else
-    ResponseData := '';
+  FHttpUseLock.Acquire;
+  try
+    case aType of
+      grtGet:
+        ResponseData := IdHTTP1.Get(URL);
+      grtPost:
+        begin
+          str := TStringStream.Create(RequestData);
+          try
+            ResponseData := IdHTTP1.Post(URL, str);
+          finally
+            str.Free;
+          end;
+        end
+    else
+      ResponseData := '';
+    end;
+  finally
+    FHttpUseLock.Release;
   end;
 end;
 

@@ -38,13 +38,13 @@ object frmMain: TfrmMain
     DataDetectorTypes = []
     Anchors = [akLeft, akTop, akRight, akBottom]
     Position.X = 216.000000000000000000
-    Position.Y = 72.000000000000000000
+    Position.Y = 400.000000000000000000
     Size.Width = 650.000000000000000000
-    Size.Height = 471.000000000000000000
+    Size.Height = 143.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 5
     Viewport.Width = 646.000000000000000000
-    Viewport.Height = 467.000000000000000000
+    Viewport.Height = 139.000000000000000000
   end
   object edtGroupListPageSize: TNumberBox
     Touch.InteractiveGestures = [LongTap, DoubleTap]
@@ -91,6 +91,17 @@ object frmMain: TfrmMain
     Size.PlatformDefault = False
     TabOrder = 11
     OnChange = lvGroupsChange
+  end
+  object TreeView1: TTreeView
+    Anchors = [akLeft, akTop, akRight]
+    Position.X = 216.000000000000000000
+    Position.Y = 72.000000000000000000
+    Size.Width = 649.000000000000000000
+    Size.Height = 321.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 13
+    Viewport.Width = 645.000000000000000000
+    Viewport.Height = 317.000000000000000000
   end
   object IdHTTP1: TIdHTTP
     AllowCookies = True

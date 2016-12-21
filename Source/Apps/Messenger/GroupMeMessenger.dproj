@@ -269,7 +269,6 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
-        <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_Optimize>false</DCC_Optimize>
         <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
@@ -307,6 +306,7 @@
         <DCCReference Include="..\..\Common\GroupMeConstU.pas"/>
         <DCCReference Include="..\..\Common\GroupMeObjectsU.pas"/>
         <DCCReference Include="..\..\Common\GroupMeRequestManagerU.pas"/>
+        <DCCReference Include="..\..\Common\GroupMeMessengerU.pas"/>
         <DCCReference Include="AppFuncU.pas"/>
         <DCCReference Include="MainFormU.pas">
             <Form>frmMain</Form>
@@ -340,12 +340,6 @@
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="2">
-                <DeployFile LocalName="..\..\..\TestApp\Win32\GroupMeMessenger.exe" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>GroupMeMessenger.exe</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule">
                     <Platform Name="OSX32">
                         <Overwrite>true</Overwrite>
@@ -353,6 +347,12 @@
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\iossimulator\libcgunwind.1.0.dylib" Class="DependencyModule">
                     <Platform Name="iOSSimulator">
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="..\..\..\TestApp\Win32\GroupMeMessenger.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>GroupMeMessenger.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
