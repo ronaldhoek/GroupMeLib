@@ -25,6 +25,10 @@ interface
 uses
   System.Classes, GroupMeObjectsU;
 
+const
+  iDefaultPageSizeGroupList = 10;
+  iDefaultPageSizeMessages = 5;
+
 type
   TGroupMeMessengerRequestType = (grtGet, grtPost);
 
@@ -69,9 +73,9 @@ type
         TGroupMeMessageID): TGroupMeResponseMessages;
     property BaseURL: string read FBaseURL write FBaseURL;
     property PageSizeGroupList: Integer read FPageSizeGroupList write
-        FPageSizeGroupList default 10;
+        FPageSizeGroupList default iDefaultPageSizeGroupList;
     property PageSizeMessages: Integer read FPageSizeMessages write
-        FPageSizeMessages default 20;
+        FPageSizeMessages default iDefaultPageSizeMessages;
     property Token: string read FToken write FToken;
   published
     property OnRequest: TGroupMeMessengerRequestEvent read FOnRequest write
@@ -88,8 +92,8 @@ const
 
 constructor TGroupMeRequestManager.Create(AOwner: TComponent);
 begin
-  FPageSizeGroupList := 10;
-  FPageSizeMessages := 20;
+  FPageSizeGroupList := iDefaultPageSizeGroupList;
+  FPageSizeMessages := iDefaultPageSizeMessages;
   FBaseURL := sUrlGroupMeApi;
   inherited;
 end;
