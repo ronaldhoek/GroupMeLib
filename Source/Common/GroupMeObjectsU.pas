@@ -6,9 +6,19 @@ unit GroupMeObjectsU;
     This unit containts the objects, which represent the data which can be
     send or requested using the GroupMe API.
 
+    Note:
+    When receiving nodes with the name 'type', you need to create a property
+    with the name 'type_' but with a fieldname of 'Ftype' (without '_'), when
+    using the default Delphi JSON REST parser.
+
   VERSION HISTORY
 
-    2016-11-28 -> initialversion bij Ronald Hoek
+    2016-11-28 -> Ronald Hoek
+      Initial version
+    2016-12-21 -> Ronald Hoek
+      TGroupMeAttachment object filled with propertie
+      'type' memebers can be used now
+      TGroupMeMessage 'attachments' available
 *)
 
 interface
@@ -50,12 +60,6 @@ type
     property code: Integer read Fcode write Fcode;
   end;
 
-  TGroupMeAttachment = class
-
-  end;
-
-  ArrayOf_TGroupMeAttachment = array of TGroupMeAttachment;
-
   TGroupMeMember = class
   private
     Fautokicked: Boolean;
@@ -74,6 +78,18 @@ type
   end;
 
   ArrayOf_TGroupMeMember = array of TGroupMeMember;
+
+  TGroupMeAttachment = class
+  private
+    Ftype: string;
+    Furl: string;
+  public
+    // ??? hoe te zien als 'type'
+    property type_: string read Ftype write Ftype;
+    property url: string read Furl write Furl;
+  end;
+
+  ArrayOf_TGroupMeAttachment = array of TGroupMeAttachment;
 
   TGroupMeMessagePreview = class
   private
@@ -121,7 +137,7 @@ type
     Foffice_mode: Boolean;
     Fphone_number: string;
     Fshare_url: string;
-    Ftype_: string;
+    Ftype: string;
     Fupdated_at: TGroupMeTimeStamp;
   public
     destructor Destroy; override;
@@ -139,8 +155,7 @@ type
     property office_mode: Boolean read Foffice_mode write Foffice_mode;
     property phone_number: string read Fphone_number write Fphone_number;
     property share_url: string read Fshare_url write Fshare_url;
-    // ??? hoe te zien als 'type'
-    property type_: string read Ftype_ write Ftype_;
+    property type_: string read Ftype write Ftype;
     property updated_at: TGroupMeTimeStamp read Fupdated_at write Fupdated_at;
   end;
 
@@ -148,6 +163,7 @@ type
 
   TGroupMeMessage = class
   private
+    Fattachments: ArrayOf_TGroupMeAttachment;
     Favatar_url: string;
     Fcreated_at: TGroupMeTimeStamp;
     Fgroup_id: TGroupMeGroupID;
@@ -158,6 +174,9 @@ type
     Ftext: string;
     Fuser_id: TGroupMeMemberID;
   public
+    destructor Destroy; override;
+    property attachments: ArrayOf_TGroupMeAttachment read Fattachments write
+        Fattachments;
     property avatar_url: string read Favatar_url write Favatar_url;
     property created_at: TGroupMeTimeStamp read Fcreated_at write Fcreated_at;
     property group_id: TGroupMeGroupID read Fgroup_id write Fgroup_id;
@@ -273,6 +292,18 @@ begin
   Fmessages.Free;
   inherited;
 end;
+
+{ TGroupMeMessage }
+
+destructor TGroupMeMessage.Destroy;
+var
+  I: Integer;
+begin
+  for I := 0 to Length(Fattachments) - 1 do
+    Fattachments[I].Free;
+  inherited;
+end;
+
 
 { TGroupMeResponseGroupList }
 
