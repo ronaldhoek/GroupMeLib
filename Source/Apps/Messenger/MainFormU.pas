@@ -33,8 +33,11 @@ type
     Label1: TLabel;
     lvGroups: TListView;
     TreeView1: TTreeView;
+    btnSend: TButton;
+    mmText: TMemo;
     procedure btnGetGroupClick(Sender: TObject);
     procedure btnLoginClick(Sender: TObject);
+    procedure btnSendClick(Sender: TObject);
     procedure edtGroupListPageSizeChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
@@ -163,6 +166,25 @@ begin
   tvi.Text := aMessage.created_at.ToString() + ' - ' + aMessage.text + AttData();
   tvi.Tag := aMessage.id;
   aParent.AddObject(tvi);
+end;
+
+procedure TfrmMain.btnSendClick(Sender: TObject);
+var
+  aGroupID: TGroupMeGroupID;
+  msg: TGroupMeSendMessage;
+begin
+  if not GetGroupID(aGroupID) then Exit;
+
+  msg := TGroupMeSendMessage.Create;
+  msg.message.text := mmText.Lines.Text;
+
+  TThread.CreateAnonymousThread(
+    procedure
+    begin
+      FRequestManager.SendMessage(aGroupID, msg);
+    end).Start;
+
+  mmText.Lines.Clear;
 end;
 
 procedure TfrmMain.edtGroupListPageSizeChange(Sender: TObject);

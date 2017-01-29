@@ -72,6 +72,31 @@ object frmMain: TfrmMain
     Viewport.Width = 645.000000000000000000
     Viewport.Height = 467.000000000000000000
   end
+  object btnSend: TButton
+    Anchors = [akTop, akRight]
+    Position.X = 784.000000000000000000
+    Position.Y = 8.000000000000000000
+    Size.Width = 80.000000000000000000
+    Size.Height = 57.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 12
+    Text = 'Send'
+    OnClick = btnSendClick
+  end
+  object mmText: TMemo
+    Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+    DataDetectorTypes = []
+    MaxLength = 1000
+    Anchors = [akLeft, akTop, akRight]
+    Position.X = 216.000000000000000000
+    Position.Y = 8.000000000000000000
+    Size.Width = 561.000000000000000000
+    Size.Height = 57.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 13
+    Viewport.Width = 557.000000000000000000
+    Viewport.Height = 53.000000000000000000
+  end
   object IdHTTP1: TIdHTTP
     AllowCookies = True
     ProxyParams.BasicAuthentication = False

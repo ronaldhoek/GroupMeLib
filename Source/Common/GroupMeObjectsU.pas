@@ -160,30 +160,36 @@ type
 
   ArrayOf_TGroupMeGroup = array of TGroupMeGroup;
 
-  TGroupMeMessage = class
+  // Base class for messages
+  TGroupMeBaseMessage = class
   private
     Fattachments: ArrayOf_TGroupMeAttachment;
+    Fsource_guid: string;
+    Ftext: string;
+  public
+    destructor Destroy; override;
+    property attachments: ArrayOf_TGroupMeAttachment read Fattachments write
+        Fattachments;
+    property source_guid: string read Fsource_guid write Fsource_guid;
+    property text: string read Ftext write Ftext;
+  end;
+
+  TGroupMeMessage = class(TGroupMeBaseMessage)
+  private
     Favatar_url: string;
     Fcreated_at: TGroupMeTimeStamp;
     Fgroup_id: TGroupMeGroupID;
     Fid: TGroupMeMessageID;
     Fname: string;
-    Fsource_guid: string;
     Fsystem: Boolean;
-    Ftext: string;
     Fuser_id: TGroupMeMemberID;
   public
-    destructor Destroy; override;
-    property attachments: ArrayOf_TGroupMeAttachment read Fattachments write
-        Fattachments;
     property avatar_url: string read Favatar_url write Favatar_url;
     property created_at: TGroupMeTimeStamp read Fcreated_at write Fcreated_at;
     property group_id: TGroupMeGroupID read Fgroup_id write Fgroup_id;
     property id: TGroupMeMessageID read Fid write Fid;
     property name: string read Fname write Fname;
-    property source_guid: string read Fsource_guid write Fsource_guid;
     property system: Boolean read Fsystem write Fsystem;
-    property text: string read Ftext write Ftext;
     property user_id: TGroupMeMemberID read Fuser_id write Fuser_id;
   end;
 
@@ -228,6 +234,19 @@ type
     destructor Destroy; override;
     property response: TGroupMeResponseMessagesResponse read Fresponse write
         Fresponse;
+  end;
+
+  (*
+    Request objects
+  *)
+
+  TGroupMeSendMessage = class
+  private
+    Fmessage: TGroupMeBaseMessage;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    property message: TGroupMeBaseMessage read Fmessage write Fmessage;
   end;
 
   (*
@@ -292,9 +311,9 @@ begin
   inherited;
 end;
 
-{ TGroupMeMessage }
+{ TGroupMeBaseMessage }
 
-destructor TGroupMeMessage.Destroy;
+destructor TGroupMeBaseMessage.Destroy;
 var
   I: Integer;
 begin
@@ -302,7 +321,6 @@ begin
     Fattachments[I].Free;
   inherited;
 end;
-
 
 { TGroupMeResponseGroupList }
 
@@ -340,6 +358,21 @@ end;
 destructor TGroupMeResponseMessages.Destroy;
 begin
   Fresponse.Free;
+  inherited;
+end;
+
+{ TGroupMeSendMessage }
+
+constructor TGroupMeSendMessage.Create;
+begin
+  inherited;
+  Fmessage := TGroupMeBaseMessage.Create;
+  Fmessage.Fsource_guid := TGUID.NewGuid.ToString;
+end;
+
+destructor TGroupMeSendMessage.Destroy;
+begin
+  Fmessage.Free;
   inherited;
 end;
 

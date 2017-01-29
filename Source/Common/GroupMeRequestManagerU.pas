@@ -71,6 +71,8 @@ type
         TGroupMeMessageID): TGroupMeResponseMessages;
     function GetMessagesBefore(aGroupID: TGroupMeGroupID; aBeforeID:
         TGroupMeMessageID): TGroupMeResponseMessages;
+    procedure SendMessage(aGroupID: TGroupMeGroupID; aMessage: TGroupMeSendMessage;
+        AOwnsMessage: Boolean = True);
     property BaseURL: string read FBaseURL write FBaseURL;
     property PageSizeGroupList: Integer read FPageSizeGroupList write
         FPageSizeGroupList default iDefaultPageSizeGroupList;
@@ -119,8 +121,7 @@ function TGroupMeRequestManager.GetBaseURIMessages(aGroupID: TGroupMeGroupID):
     string;
 begin
   Result := FBaseURL + '/groups/' + aGroupID.ToString() + '/messages' +
-    '?' + GetTokenParam +
-    '&limit=' + PageSizeMessages.ToString();
+    '?' + GetTokenParam;
 end;
 
 function TGroupMeRequestManager.GetGroupInfo(aGroupID: TGroupMeGroupID):
@@ -152,7 +153,8 @@ function TGroupMeRequestManager.GetMessages(aGroupID: TGroupMeGroupID):
 var
   sURI, sResponse: string;
 begin
-  sURI := GetBaseURIMessages(aGroupID);
+  sURI := GetBaseURIMessages(aGroupID)
+    + '&limit=' + PageSizeMessages.ToString();
   InternalDoRequest(grtGet, sURI, '', sResponse);
   Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse, [joDateFormatUnix]);
 end;
@@ -165,7 +167,9 @@ begin
   if aAfterID = 0 then
     Result := GetMessages(aGroupID)
   else begin
-    sURI := GetBaseURIMessages(aGroupID) + '&after_id=' + aAfterID.ToString();
+    sURI := GetBaseURIMessages(aGroupID)
+       + '&limit=' + PageSizeMessages.ToString()
+       + '&after_id=' + aAfterID.ToString();
     InternalDoRequest(grtGet, sURI, '', sResponse);
     Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse, [joDateFormatUnix]);
   end;
@@ -179,7 +183,9 @@ begin
   if aBeforeID = 0 then
     Result := GetMessages(aGroupID)
   else begin
-    sURI := GetBaseURIMessages(aGroupID) + '&before_id=' + aBeforeID.ToString();
+    sURI := GetBaseURIMessages(aGroupID)
+      + '&limit=' + PageSizeMessages.ToString()
+      + '&before_id=' + aBeforeID.ToString();
     InternalDoRequest(grtGet, sURI, '', sResponse);
     Result := TJson.JsonToObject<TGroupMeResponseMessages>(sResponse, [joDateFormatUnix]);
   end;
@@ -188,6 +194,21 @@ end;
 function TGroupMeRequestManager.GetTokenParam: string;
 begin
   Result := Format(sTokenParam, [FToken]);
+end;
+
+procedure TGroupMeRequestManager.SendMessage(aGroupID: TGroupMeGroupID;
+    aMessage: TGroupMeSendMessage; AOwnsMessage: Boolean = True);
+var
+  sURI, sData, sResponse: string;
+begin
+  try
+    sURI := GetBaseURIMessages(aGroupID);
+    sData := TJson.ObjectToJsonString(aMessage, [joDateFormatUnix]);
+    InternalDoRequest(grtPost, sURI, sData, sResponse);
+  finally
+    if AOwnsMessage then
+      aMessage.Free;
+  end;
 end;
 
 end.
