@@ -16,8 +16,8 @@ unit GroupMeObjectsU;
     2016-11-28 -> Ronald Hoek
       Initial version
     2016-12-21 -> Ronald Hoek
-      TGroupMeAttachment object filled with propertie
-      'type' memebers can be used now
+      TGroupMeAttachment object filled with properties
+      'type' members can be used now
       TGroupMeMessage 'attachments' available
 *)
 
@@ -84,7 +84,6 @@ type
     Ftype: string;
     Furl: string;
   public
-    // ??? hoe te zien als 'type'
     property type_: string read Ftype write Ftype;
     property url: string read Furl write Furl;
   end;

@@ -26,29 +26,9 @@ object frmMain: TfrmMain
     TextSettings.WordWrap = False
     Text = 'Label1'
   end
-  object btnGetBGroups: TButton
-    Position.X = 8.000000000000000000
-    Position.Y = 40.000000000000000000
-    TabOrder = 3
-    Text = 'Get Groups'
-    OnClick = btnGetBGroupsClick
-  end
-  object Memo1: TMemo
-    Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
-    DataDetectorTypes = []
-    Anchors = [akLeft, akTop, akRight, akBottom]
-    Position.X = 216.000000000000000000
-    Position.Y = 400.000000000000000000
-    Size.Width = 650.000000000000000000
-    Size.Height = 143.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 5
-    Viewport.Width = 646.000000000000000000
-    Viewport.Height = 139.000000000000000000
-  end
   object edtGroupListPageSize: TNumberBox
     Touch.InteractiveGestures = [LongTap, DoubleTap]
-    TabOrder = 7
+    TabOrder = 5
     Cursor = crIBeam
     Min = 1.000000000000000000
     Max = 50.000000000000000000
@@ -62,21 +42,11 @@ object frmMain: TfrmMain
     OnChange = edtGroupListPageSizeChange
   end
   object btnGetGroup: TButton
-    Position.X = 144.000000000000000000
+    Position.X = 8.000000000000000000
     Position.Y = 40.000000000000000000
-    TabOrder = 8
+    TabOrder = 6
     Text = 'GetGroup'
     OnClick = btnGetGroupClick
-  end
-  object btnGetMessages: TButton
-    Position.X = 232.000000000000000000
-    Position.Y = 40.000000000000000000
-    Size.Width = 89.000000000000000000
-    Size.Height = 22.000000000000000000
-    Size.PlatformDefault = False
-    TabOrder = 9
-    Text = 'Get Messages'
-    OnClick = btnGetMessagesClick
   end
   object lvGroups: TListView
     ItemAppearanceClassName = 'TListItemAppearance'
@@ -89,19 +59,18 @@ object frmMain: TfrmMain
     Size.Width = 201.000000000000000000
     Size.Height = 471.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 11
-    OnChange = lvGroupsChange
+    TabOrder = 8
   end
   object TreeView1: TTreeView
     Anchors = [akLeft, akTop, akRight]
     Position.X = 216.000000000000000000
     Position.Y = 72.000000000000000000
     Size.Width = 649.000000000000000000
-    Size.Height = 321.000000000000000000
+    Size.Height = 471.000000000000000000
     Size.PlatformDefault = False
-    TabOrder = 13
+    TabOrder = 10
     Viewport.Width = 645.000000000000000000
-    Viewport.Height = 317.000000000000000000
+    Viewport.Height = 467.000000000000000000
   end
   object IdHTTP1: TIdHTTP
     AllowCookies = True

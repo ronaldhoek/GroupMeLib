@@ -21,8 +21,10 @@ const
   DefaultUpdateInterval = 5; // 5 seconds
 
 type
-  TOnNewMessages = procedure(aGroupID: TGroupMeGroupID; aMessages:
-      ArrayOf_TGroupMeMessage) of object;
+  TGroupMeMessageOrder = (moCreatedDescending, moCreatedAscending);
+
+  TGroupMeOnNewMessages = procedure(aGroupID: TGroupMeGroupID; aMessages:
+      ArrayOf_TGroupMeMessage; aMessageOrder: TGroupMeMessageOrder) of object;
 
   ArrayOf_TGroupMeGroupID = array of TGroupMeGroupID;
 
@@ -37,7 +39,7 @@ type
       MessageID: TGroupMeMessageID;
     end;
     FLock: TSynchroObject;
-    FOnNewMessages: TOnNewMessages;
+    FOnNewMessages: TGroupMeOnNewMessages;
     FOnRequest: TGroupMeMessengerRequestEvent;
     FPollingThread: TThread;
     FToken: string;
@@ -58,13 +60,14 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure BeforeDestruction; override;
+    procedure WaitFor;
   published
     property Active: Boolean read FActive write SetActive;
     property GroupIDs: ArrayOf_TGroupMeGroupID read FGroupIDs write SetGroupIDs;
     property Token: string read FToken write SetToken;
     property UpdateInterval: Integer read FUpdateInterval write FUpdateInterval
         default DefaultUpdateInterval;
-    property OnNewMessages: TOnNewMessages read FOnNewMessages write FOnNewMessages;
+    property OnNewMessages: TGroupMeOnNewMessages read FOnNewMessages write FOnNewMessages;
     property OnRequest: TGroupMeMessengerRequestEvent read FOnRequest write
         FOnRequest;
   end;
@@ -81,7 +84,7 @@ type
     FGroupIDs: ArrayOf_TGroupMeGroupID;
     FGroupLastMessageID: ArrayOf_TGroupMeMessageID;
     FReqMan: TGroupMeRequestManager;
-    FOnNewMessages: TOnNewMessages;
+    FOnNewMessages: TGroupMeOnNewMessages;
     FUpdateInterval: Integer;
   protected
     procedure Execute; override;
@@ -115,7 +118,10 @@ begin
 end;
 
 procedure TGroupMePollingThread.Execute;
+const
+  _Order: array[boolean] of TGroupMeMessageOrder = (moCreatedAscending, moCreatedDescending);
 var
+  bDescending: Boolean;
   I: Integer;
   resp: TGroupMeResponseMessages;
 begin
@@ -125,12 +131,17 @@ begin
     begin
       if Terminated then Exit;
       try
+        bDescending := (FGroupLastMessageID[I] = 0);
         resp := FReqMan.GetMessagesAfter(FGroupIDs[I], FGroupLastMessageID[I]);
         try
           if Length(resp.response.messages) > 0 then
           begin
-            FGroupLastMessageID[I] := resp.response.messages[Length(resp.response.messages)-1].id;
-            FOnNewMessages(FGroupIDs[I], resp.response.messages);
+            if bDescending then
+              FGroupLastMessageID[I] := resp.response.messages[0].id
+            else
+              FGroupLastMessageID[I] := resp.response.messages[Length(resp.response.messages)-1].id;
+
+            FOnNewMessages(FGroupIDs[I], resp.response.messages, _Order[bDescending]);
             resp.response.messages := nil;
           end;
         finally
@@ -344,6 +355,20 @@ begin
   finally
     FLock.Release;
   end;
+end;
+
+procedure TGroupMeMessenger.WaitFor;
+var
+  _Thread: TThread;
+begin
+  FLock.Acquire;
+  try
+    _Thread := FPollingThread;
+  finally
+    FLock.Release;
+  end;
+  if Assigned(_Thread) then
+    _Thread.WaitFor;
 end;
 
 end.
