@@ -10,6 +10,7 @@ unit GroupMeMessengerU;
   VERSION HISTORY
 
     2016-12-05 -> initialversion bij Ronald Hoek
+    2017-01-29 -> Update eventhandle for new messages
 *)
 
 interface
@@ -24,7 +25,8 @@ type
   TGroupMeMessageOrder = (moCreatedDescending, moCreatedAscending);
 
   TGroupMeOnNewMessages = procedure(aGroupID: TGroupMeGroupID; aMessages:
-      ArrayOf_TGroupMeMessage; aMessageOrder: TGroupMeMessageOrder) of object;
+      ArrayOf_TGroupMeMessage; aMessageOrder: TGroupMeMessageOrder; var
+      aEventHandlerOwnsMessages: boolean) of object;
 
   ArrayOf_TGroupMeGroupID = array of TGroupMeGroupID;
 
@@ -118,12 +120,11 @@ begin
 end;
 
 procedure TGroupMePollingThread.Execute;
-const
-  _Order: array[boolean] of TGroupMeMessageOrder = (moCreatedAscending, moCreatedDescending);
 var
-  bDescending: Boolean;
   I: Integer;
   resp: TGroupMeResponseMessages;
+  _Order: TGroupMeMessageOrder;
+  bEventHandlerOwnsMessages: Boolean;
 begin
   while not Terminated do
   begin
@@ -131,18 +132,30 @@ begin
     begin
       if Terminated then Exit;
       try
-        bDescending := (FGroupLastMessageID[I] = 0);
-        resp := FReqMan.GetMessagesAfter(FGroupIDs[I], FGroupLastMessageID[I]);
+        if FGroupLastMessageID[I] = 0 then
+        begin
+          resp := FReqMan.GetMessages(FGroupIDs[I]);
+          _Order := moCreatedDescending;
+        end else
+        begin
+          resp := FReqMan.GetMessagesAfter(FGroupIDs[I], FGroupLastMessageID[I]);
+          _Order := moCreatedAscending;
+        end;
+
         try
           if Length(resp.response.messages) > 0 then
           begin
-            if bDescending then
-              FGroupLastMessageID[I] := resp.response.messages[0].id
-            else
-              FGroupLastMessageID[I] := resp.response.messages[Length(resp.response.messages)-1].id;
+            case _Order of
+              moCreatedDescending:
+                FGroupLastMessageID[I] := resp.response.messages[0].id;
+              moCreatedAscending:
+                FGroupLastMessageID[I] := resp.response.messages[Length(resp.response.messages)-1].id;
+            end;
 
-            FOnNewMessages(FGroupIDs[I], resp.response.messages, _Order[bDescending]);
-            resp.response.messages := nil;
+            bEventHandlerOwnsMessages := False;
+            FOnNewMessages(FGroupIDs[I], resp.response.messages, _Order, bEventHandlerOwnsMessages);
+            if bEventHandlerOwnsMessages then
+              resp.response.messages := nil;
           end;
         finally
           resp.Free;

@@ -52,7 +52,8 @@ type
         ResponseData: string);
   protected
     procedure OnNewMessages(aGroupID: TGroupMeGroupID; aMessages:
-        ArrayOf_TGroupMeMessage; aMessageOrder: TGroupMeMessageOrder);
+        ArrayOf_TGroupMeMessage; aMessageOrder: TGroupMeMessageOrder; var
+        aEventHandlerOwnsMessages: boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -265,7 +266,8 @@ begin
 end;
 
 procedure TfrmMain.OnNewMessages(aGroupID: TGroupMeGroupID; aMessages:
-    ArrayOf_TGroupMeMessage; aMessageOrder: TGroupMeMessageOrder);
+    ArrayOf_TGroupMeMessage; aMessageOrder: TGroupMeMessageOrder; var
+    aEventHandlerOwnsMessages: boolean);
 begin
   TThread.Synchronize(nil,
     procedure
@@ -275,20 +277,14 @@ begin
     begin
       tvi := GetTreeViewGroup(aGroupID);
 
-      // Is message list in descending creation order (oldest first)?
+      // what's the order of the message list?
       case aMessageOrder of
         moCreatedDescending:
           for I := Length(aMessages) - 1 downto 0 do
-          begin
             AddTreeViewMessage(tvi, aMessages[I]);
-            aMessages[I].Free;
-          end;
         moCreatedAscending:
           for I := 0 to Length(aMessages) - 1 do
-          begin
             AddTreeViewMessage(tvi, aMessages[I]);
-            aMessages[I].Free;
-          end;
       end;
     end);
 end;
