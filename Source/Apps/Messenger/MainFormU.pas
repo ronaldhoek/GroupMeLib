@@ -329,6 +329,7 @@ begin
         begin
           str := TStringStream.Create(RequestData);
           try
+            IdHTTP1.Request.ContentType := 'application/json; charset=UTF-8';
             ResponseData := IdHTTP1.Post(URL, str);
           finally
             str.Free;
