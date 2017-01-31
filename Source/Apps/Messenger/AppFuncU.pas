@@ -13,13 +13,19 @@ unit AppFuncU;
 
 interface
 
+  function AppMainConfigFile: string;
   function AppUserDataPath: string;
-  function AppConfigFile: string;
+  function AppUserConfigFile: string;
 
 implementation
 
 uses
   System.SysUtils, System.IOUtils;
+
+function AppMainConfigFile: string;
+begin
+  Result := TPath.ChangeExtension(GetModuleName(MainInstance), '.ini');
+end;
 
 function AppUserDataPath: string;
 begin
@@ -29,7 +35,7 @@ begin
     Result := TPath.GetHomePath + TPath.DirectorySeparatorChar + 'GroupMeMessenger';
 end;
 
-function AppConfigFile: string;
+function AppUserConfigFile: string;
 begin
   Result := AppUserDataPath + TPath.DirectorySeparatorChar + 'settings.ini';
 end;

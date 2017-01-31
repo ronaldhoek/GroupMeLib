@@ -26,6 +26,7 @@ type
     ActionList1: TActionList;
     actnPaste: TAction;
     oAuthCallbackServer: TIdHTTPServer;
+    procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure actnPasteExecute(Sender: TObject);
     procedure oAuthCallbackServerCommandGet(AContext: TIdContext;
@@ -42,7 +43,20 @@ type
 
 implementation
 
+uses
+  System.IniFiles, AppFuncU;
+
 {$R *.fmx}
+
+procedure TfrmLogin.FormCreate(Sender: TObject);
+begin
+  with TMemIniFile.Create(AppMainConfigFile) do
+  try
+    FClientID := ReadString('Settings', 'ClientID', '');
+  finally
+    Free;
+  end;
+end;
 
 procedure TfrmLogin.ProcessRequest(ARequestInfo: TIdHTTPRequestInfo);
 begin

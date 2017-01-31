@@ -102,7 +102,7 @@ begin
       FRequestManager.Token := Token;
       FMessenger.Token := Token;
       ForceDirectories(AppUserDataPath);
-      ini := TMemIniFile.Create(AppConfigFile);
+      ini := TMemIniFile.Create(AppUserConfigFile);
       try
         ini.WriteString('UserAccess', 'Token', Token);
         TMemIniFile(ini).UpdateFile;
@@ -197,7 +197,7 @@ procedure TfrmMain.FormCreate(Sender: TObject);
 var
   ini: TCustomIniFile;
 begin
-  ini := TMemIniFile.Create(AppConfigFile);
+  ini := TMemIniFile.Create(AppUserConfigFile);
   try
     FRequestManager.Token := ini.ReadString('UserAccess', 'Token', '');
     FMessenger.Token := FRequestManager.Token;
@@ -205,7 +205,6 @@ begin
   finally
     ini.Free;
   end;
-  InitMessengerGroups;
 end;
 
 function TfrmMain.GetGroupID(out aGroupID: TGroupMeGroupID): Boolean;
@@ -345,7 +344,9 @@ end;
 
 procedure TfrmMain.TokenChanged;
 begin
-  Label1.Text := 'Token: ' + FRequestManager.Token;
+  Caption := 'Token: ' + FRequestManager.Token;
+  if FRequestManager.Token > '' then
+    InitMessengerGroups;
 end;
 
 end.
