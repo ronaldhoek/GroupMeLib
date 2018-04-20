@@ -16,27 +16,20 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.WebBrowser,
-  System.Actions, FMX.ActnList, FMX.Controls.Presentation, FMX.ScrollBox,
-  FMX.Memo, IdContext, IdCustomHTTPServer, IdBaseComponent, IdComponent,
-  IdCustomTCPServer, IdHTTPServer;
+  System.Actions, FMX.ActnList, FMX.Controls.Presentation, FMX.ScrollBox, FMX.Memo;
 
 type
   TfrmLogin = class(TForm)
     WebBrowser1: TWebBrowser;
     ActionList1: TActionList;
     actnPaste: TAction;
-    oAuthCallbackServer: TIdHTTPServer;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure actnPasteExecute(Sender: TObject);
-    procedure oAuthCallbackServerCommandGet(AContext: TIdContext;
-      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
-    procedure oAuthCallbackServerCommandOther(AContext: TIdContext;
-      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+    procedure WebBrowser1DidFinishLoad(ASender: TObject);
   private
     FClientID: string;
     FToken: string;
-    procedure ProcessRequest(ARequestInfo: TIdHTTPRequestInfo);
   public
     property Token: string read FToken;
   end;
@@ -44,7 +37,7 @@ type
 implementation
 
 uses
-  System.IniFiles, AppFuncU;
+  System.IniFiles, AppFuncU, IdURI;
 
 {$R *.fmx}
 
@@ -58,15 +51,6 @@ begin
   end;
 end;
 
-procedure TfrmLogin.ProcessRequest(ARequestInfo: TIdHTTPRequestInfo);
-begin
-  if (ARequestInfo.CommandType = THTTPCommandType.hcGET) then
-  begin
-    FToken := ARequestInfo.Params.Values['access_token'];
-    if FToken > '' then Self.ModalResult := mrOK;
-  end;
-end;
-
 procedure TfrmLogin.actnPasteExecute(Sender: TObject);
 begin
   WebBrowser1.EvaluateJavaScript('document.execCommand(''Paste'');');
@@ -77,16 +61,36 @@ begin
   WebBrowser1.URL := 'https://oauth.groupme.com/oauth/authorize?client_id=' + FClientID;
 end;
 
-procedure TfrmLogin.oAuthCallbackServerCommandGet(AContext: TIdContext;
-  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+procedure TfrmLogin.WebBrowser1DidFinishLoad(ASender: TObject);
+var
+  p: TStrings;
+  uri: TIdURI;
+  I: Integer;
 begin
-  ProcessRequest(ARequestInfo);
-end;
+  uri := TIdURI.Create((ASender as TWebBrowser).URL);
+  try
+    // Is URL specified in GroupMe application profile
+    if SameText(uri.Host, 'localhost') and (uri.Params > '') then
+    begin
+      p := TStringList.Create;
+      try
+        p.Delimiter := '&';
+        p.StrictDelimiter := True;
+        // See 'TIdHTTPRequestInfo.DecodeAndSetParams' regarding '+' replacement
+        p.DelimitedText := StringReplace(uri.Params, '+', ' ', [rfReplaceAll]);
+        // Decode parameters (not required in this situation ????)
+        for I := 0 to p.Count - 1 do
+          p[I] := TIdURI.URLDecode(p[I]);
 
-procedure TfrmLogin.oAuthCallbackServerCommandOther(AContext: TIdContext;
-  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
-begin
-  ProcessRequest(ARequestInfo);
+        FToken := p.Values['access_token'];
+        if FToken > '' then Self.ModalResult := mrOK;
+      finally
+        p.Free;
+      end;
+    end;
+  finally
+    uri.Free;
+  end;
 end;
 
 end.

@@ -15,6 +15,7 @@ object frmLogin: TfrmLogin
     Size.Width = 445.000000000000000000
     Size.Height = 413.000000000000000000
     Size.PlatformDefault = False
+    OnDidFinishLoad = WebBrowser1DidFinishLoad
   end
   object ActionList1: TActionList
     Left = 280
@@ -24,25 +25,5 @@ object frmLogin: TfrmLogin
       ShortCut = 16470
       OnExecute = actnPasteExecute
     end
-  end
-  object oAuthCallbackServer: TIdHTTPServer
-    Active = True
-    Bindings = <
-      item
-        IP = '127.0.0.1'
-        Port = 18181
-      end
-      item
-        IP = '::1'
-        IPVersion = Id_IPv6
-        Port = 18181
-      end>
-    DefaultPort = 18181
-    MaxConnections = 2
-    ServerSoftware = 'GroupMeMessenger'
-    OnCommandOther = oAuthCallbackServerCommandOther
-    OnCommandGet = oAuthCallbackServerCommandGet
-    Left = 288
-    Top = 128
   end
 end
